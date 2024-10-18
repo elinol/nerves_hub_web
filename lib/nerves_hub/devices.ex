@@ -29,10 +29,12 @@ defmodule NervesHub.Devices do
 
   @min_fwup_delta_updatable_version ">=1.10.0"
 
+  @spec get_device(non_neg_integer()) :: Device.t() | nil
   def get_device(device_id) when is_integer(device_id) do
     Repo.get(Device, device_id)
   end
 
+  @spec get_active_device(Keyword.t() | map()) :: {:ok, Device.t()} | {:error, :not_found}
   def get_active_device(filters) do
     Device
     |> Repo.exclude_deleted()
@@ -43,6 +45,7 @@ defmodule NervesHub.Devices do
     end
   end
 
+  @spec get_devices_by_org_id_and_product_id(non_neg_integer(), non_neg_integer()) :: [Device.t()]
   def get_devices_by_org_id_and_product_id(org_id, product_id) do
     query =
       from(
@@ -56,6 +59,9 @@ defmodule NervesHub.Devices do
     |> Repo.all()
   end
 
+  @spec get_devices_by_org_id_and_product_id(non_neg_integer(), non_neg_integer(), map()) :: [
+          Device.t()
+        ]
   def get_devices_by_org_id_and_product_id(org_id, product_id, opts) do
     pagination = Map.get(opts, :pagination, %{})
     sorting = Map.get(opts, :sort, {:asc, :identifier})
@@ -75,6 +81,7 @@ defmodule NervesHub.Devices do
     |> Repo.paginate(pagination)
   end
 
+  @spec filter(non_neg_integer(), map()) :: Scrivener.Page.t()
   def filter(product_id, opts) do
     pagination = Map.get(opts, :pagination, %{})
     sorting = Map.get(opts, :sort, {:asc, :identifier})
@@ -88,6 +95,8 @@ defmodule NervesHub.Devices do
     |> Repo.paginate(pagination)
   end
 
+  @spec get_minimal_device_location_by_org_id_and_product_id(non_neg_integer(), non_neg_integer()) ::
+          [Device.t()]
   def get_minimal_device_location_by_org_id_and_product_id(org_id, product_id) do
     Device
     |> select([d], %{
@@ -106,6 +115,7 @@ defmodule NervesHub.Devices do
     |> Repo.all()
   end
 
+  # Probably deprecated since device metrics was implemented
   def get_health_by_org_id_and_product_id(org_id, product_id, opts) do
     query =
       from(
@@ -215,6 +225,7 @@ defmodule NervesHub.Devices do
     end)
   end
 
+  @spec get_device_count_by_org_id(neg_integer()) :: non_neg_integer()
   def get_device_count_by_org_id(org_id) do
     q =
       from(
@@ -228,6 +239,7 @@ defmodule NervesHub.Devices do
     |> Repo.one!()
   end
 
+  @spec get_device_count_by_product_id(neg_integer()) :: non_neg_integer()
   def get_device_count_by_product_id(product_id) do
     Device
     |> where([d], d.product_id == ^product_id)
@@ -236,16 +248,11 @@ defmodule NervesHub.Devices do
     |> Repo.one!()
   end
 
-  defp device_by_org_query(org_id, device_id) do
-    from(
-      d in Device,
-      where: d.org_id == ^org_id,
-      where: d.id == ^device_id
-    )
-  end
-
+  @spec get_device_by_org(Org.t(), non_neg_integer()) :: {:ok, Device.t()} | {:error, :not_found}
   def get_device_by_org(%Org{id: org_id}, device_id) do
-    device_by_org_query(org_id, device_id)
+    Device
+    |> where(id: ^device_id)
+    |> where(org_id: ^org_id)
     |> Repo.exclude_deleted()
     |> Repo.one()
     |> case do
@@ -254,6 +261,7 @@ defmodule NervesHub.Devices do
     end
   end
 
+  @spec get_by_identifier(String.t()) :: {:ok, Device.t()} | {:error, :not_found}
   def get_by_identifier(identifier) do
     case Repo.get_by(Device, identifier: identifier) do
       nil ->
@@ -344,6 +352,7 @@ defmodule NervesHub.Devices do
     end
   end
 
+  @spec get_device_by(Keyword.t()) :: {:ok, Device.t()} | {:error, :not_found}
   def get_device_by(filters) do
     Repo.get_by(Device, filters)
     |> case do
@@ -352,6 +361,7 @@ defmodule NervesHub.Devices do
     end
   end
 
+  @spec get_eligible_deployments(Device.t()) :: [Deployment.t()]
   def get_eligible_deployments(%Device{firmware_metadata: nil}), do: []
 
   def get_eligible_deployments(%Device{firmware_metadata: meta} = device) do
